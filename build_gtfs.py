@@ -72,15 +72,34 @@ write("calendar.txt",
 
 # routes.txt  — trunk letters A-G are the Borgarlína high-frequency spine.
 TRUNK = set("ABCDEFG")
+
+def hex6(c):
+    """Normalise '#rgb'/'#rrggbb' to GTFS route_color form 'RRGGBB', else ''."""
+    c = (c or "").lstrip("#").strip()
+    if len(c) == 3:
+        c = "".join(ch * 2 for ch in c)
+    ok = len(c) == 6 and all(d in "0123456789abcdefABCDEF" for d in c)
+    return c.upper() if ok else ""
+
+def text_for(bg):
+    """Black or white label colour for a background hex, by perceived luminance."""
+    if not bg:
+        return ""
+    r, g, b = (int(bg[i:i + 2], 16) for i in (0, 2, 4))
+    return "000000" if (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 else "FFFFFF"
+
 route_rows = []
 for line in data["lines"]:
     short = line["gtfsShortName"] or ""
     # 700 = Bus Service; 702 = Express (use for trunk to distinguish)
     rtype = 702 if short in TRUNK else 3
+    color = hex6((line.get("lineDisplay") or {}).get("color"))  # official plan colour
     route_rows.append([line["id"], AGENCY_ID, short,
-                       line["gtfsLongName"] or line["name"], rtype])
+                       line["gtfsLongName"] or line["name"], rtype,
+                       color, text_for(color)])
 write("routes.txt",
-      ["route_id", "agency_id", "route_short_name", "route_long_name", "route_type"],
+      ["route_id", "agency_id", "route_short_name", "route_long_name", "route_type",
+       "route_color", "route_text_color"],
       route_rows)
 
 # trips.txt + stop_times.txt

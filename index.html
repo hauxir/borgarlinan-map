@@ -25,10 +25,11 @@
   .gh:hover{opacity:1;}
   .gh svg{width:20px;height:20px;fill:currentColor;}
   .modes{display:flex;gap:2px;padding-right:28px;}
-  .mode{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
-        padding:10px 4px;cursor:pointer;border-bottom:3px solid transparent;
-        color:#d2e3fc;font-size:13px;border-radius:8px 8px 0 0;}
+  .mode{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+        padding:8px 2px;cursor:pointer;border-bottom:3px solid transparent;
+        color:#d2e3fc;font-size:12px;border-radius:8px 8px 0 0;white-space:nowrap;}
   .mode svg{width:20px;height:20px;fill:currentColor;}
+  .mode .mt{font-size:11px;font-weight:700;min-height:13px;line-height:1;}
   .mode.active{color:#fff;border-bottom-color:#fff;}
   .mode:hover:not(.active){background:rgba(255,255,255,.12);}
   /* origin/destination box */
@@ -69,6 +70,8 @@
         padding:3px 9px;border-radius:13px;color:#fff;}
   .chip.trunk{background:var(--trunk);} .chip.bus{background:#1a73e8;}
   .chip.walk{background:#f1f3f4;color:#5f6368;padding:3px 7px;}
+  .chip.car{background:#e6f4ea;color:#137333;}
+  .chip.bike{background:#fde7d3;color:#b5560a;}
   .chip svg{width:14px;height:14px;fill:currentColor;}
   .arrow{color:#9aa0a6;font-size:12px;}
   .it .row{display:flex;justify-content:space-between;align-items:baseline;}
@@ -115,10 +118,22 @@
         <div class="mode active" data-mode="TRANSIT" title="Borgarlínan">
           <svg viewBox="0 0 24 24"><path d="M12 2c-4 0-8 .5-8 4v9.5A3.5 3.5 0 007.5 19L6 20.5v.5h12v-.5L16.5 19a3.5 3.5 0 003.5-3.5V6c0-3.5-4-4-8-4zM7.5 17A1.5 1.5 0 119 15.5 1.5 1.5 0 017.5 17zm3.5-7H6V6h5zm2 0V6h5v4zm3.5 7a1.5 1.5 0 111.5-1.5 1.5 1.5 0 01-1.5 1.5z"/></svg>
           Borgarlínan
+          <span class="mt"></span>
+        </div>
+        <div class="mode" data-mode="BICYCLE" title="Hjólandi">
+          <svg viewBox="0 0 24 24"><path d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.6 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z"/></svg>
+          Hjólandi
+          <span class="mt"></span>
+        </div>
+        <div class="mode" data-mode="CAR" title="Keyrandi">
+          <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
+          Keyrandi
+          <span class="mt"></span>
         </div>
         <div class="mode" data-mode="WALK" title="Gangandi">
           <svg viewBox="0 0 24 24"><path d="M13.5 5.5a2 2 0 102-2 2 2 0 00-2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7 7 0 0019 13v-2a5 5 0 01-4.2-2.4l-1-1.6c-.4-.6-1-1-1.8-1-.3 0-.5.1-.8.1L6 6.3V11h2V7.6l1.8-.7"/></svg>
           Gangandi
+          <span class="mt"></span>
         </div>
       </div>
     </div>
@@ -178,7 +193,7 @@ const destIcon=L.divIcon({className:'',iconSize:[28,40],iconAnchor:[14,38],
   html:'<svg width="28" height="40" viewBox="0 0 24 36"><path fill="#ea4335" stroke="#b31412" stroke-width=".5" d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z"/><circle cx="12" cy="12" r="4.5" fill="#fff"/></svg>'});
 
 const coord=ll=>`${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`;
-const maybePlan=()=>{ if(A&&B) plan(); };
+const maybePlan=()=>{ if(A&&B){ plan(); modeTimes(); } };
 function setA(ll,label){A=ll; if(mA)map.removeLayer(mA); mA=L.marker(ll,{icon:originIcon,zIndexOffset:500}).addTo(map);
   if(label!==undefined)fromq.value=label; updateHash(); maybePlan();}
 function setB(ll,label){B=ll; if(mB)map.removeLayer(mB); mB=L.marker(ll,{icon:destIcon,zIndexOffset:600}).addTo(map);
@@ -220,7 +235,7 @@ function loadHash(){
   if(p.get('m')){mode=p.get('m'); document.querySelectorAll('.mode').forEach(m=>m.classList.toggle('active',m.dataset.mode===mode));}
   if(p.get('f')){A=ll(p.get('f')); mA=L.marker(A,{icon:originIcon,zIndexOffset:500}).addTo(map); fromq.value=p.get('fl')||coord(A);}
   if(p.get('t')){B=ll(p.get('t')); mB=L.marker(B,{icon:destIcon,zIndexOffset:600}).addTo(map); toq.value=p.get('tl')||coord(B);}
-  if(A&&B){map.fitBounds(L.latLngBounds([A,B]).pad(0.4)); plan();} else if(A||B) map.setView(A||B,13);
+  if(A&&B){map.fitBounds(L.latLngBounds([A,B]).pad(0.4)); plan(); modeTimes();} else if(A||B) map.setView(A||B,13);
 }
 
 // ---- address autocomplete (Nominatim, capital region) -----------------------
@@ -251,11 +266,11 @@ const Q=`query($fLat:Float!,$fLon:Float!,$tLat:Float!,$tLon:Float!,$d:String!,$t
   plan(from:{lat:$fLat,lon:$fLon},to:{lat:$tLat,lon:$tLon},date:$d,time:$ti,numItineraries:6,
        transportModes:$modes){
     itineraries{ duration walkDistance numberOfTransfers startTime endTime
-      legs{ mode duration distance startTime endTime route{shortName} legGeometry{points} from{name} to{name} } } } }`;
+      legs{ mode duration distance startTime endTime route{shortName color textColor} intermediateStops{name lat lon} legGeometry{points} from{name lat lon} to{name lat lon} } } } }`;
 
 async function plan(){
   results.innerHTML='<div class="msg">Leita að leiðum…</div>';
-  const modes = mode==='WALK' ? [{mode:'WALK'}] : [{mode:'WALK'},{mode:'TRANSIT'}];
+  const modes = mode==='WALK' ? [{mode:'WALK'}] : mode==='CAR' ? [{mode:'CAR'}] : mode==='BICYCLE' ? [{mode:'BICYCLE'}] : [{mode:'WALK'},{mode:'TRANSIT'}];
   const vars={fLat:A.lat,fLon:A.lng,tLat:B.lat,tLon:B.lng,d:$('day').value,ti:$('time').value+":00",modes};
   try{
     const r=await fetch(OTP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:Q,variables:vars})});
@@ -266,6 +281,28 @@ async function plan(){
     results.innerHTML='<div class="msg err">Náði ekki sambandi við leiðavélina á '+new URL(OTP).host+'.</div>';}
 }
 
+// ---- per-mode travel time shown on each tab (Google-Maps style) -------------
+const MODE_DEFS=[['TRANSIT',[{mode:'WALK'},{mode:'TRANSIT'}]],['BICYCLE',[{mode:'BICYCLE'}]],
+                 ['CAR',[{mode:'CAR'}]],['WALK',[{mode:'WALK'}]]];
+const MTQ=`query($fLat:Float!,$fLon:Float!,$tLat:Float!,$tLon:Float!,$d:String!,$ti:String!,$modes:[TransportMode!]){
+  plan(from:{lat:$fLat,lon:$fLon},to:{lat:$tLat,lon:$tLon},date:$d,time:$ti,numItineraries:4,transportModes:$modes){itineraries{duration}}}`;
+const shortMin=s=>{const m=Math.round(s/60);return m<60?m+' mín':Math.floor(m/60)+' klst'+(m%60?' '+(m%60):'');};
+let mtSeq=0;
+function modeTimes(){
+  const seq=++mtSeq;  // a newer trip invalidates older in-flight results
+  MODE_DEFS.forEach(async ([m,modes])=>{
+    const el=document.querySelector('.mode[data-mode="'+m+'"] .mt'); if(!el)return; el.textContent='…';
+    try{
+      const vars={fLat:A.lat,fLon:A.lng,tLat:B.lat,tLon:B.lng,d:$('day').value,ti:$('time').value+":00",modes};
+      const j=await (await fetch(OTP,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query:MTQ,variables:vars})})).json();
+      if(seq!==mtSeq)return;  // stale, a newer request is in flight
+      const its=j.data&&j.data.plan&&j.data.plan.itineraries;
+      el.textContent=its&&its.length?shortMin(Math.min(...its.map(i=>i.duration))):'–';
+    }catch(e){ if(seq===mtSeq)el.textContent=''; }
+  });
+}
+
 const TRANSFER_LEEWAY=600; // accept up to 10 min extra to drop a transfer
 function rank(its){const fastest=Math.min(...its.map(i=>i.duration));
   return its.slice().sort((a,b)=>{const aIn=a.duration<=fastest+TRANSFER_LEEWAY,bIn=b.duration<=fastest+TRANSFER_LEEWAY;
@@ -274,10 +311,17 @@ function rank(its){const fastest=Math.min(...its.map(i=>i.duration));
 
 const WALKSVG='<svg viewBox="0 0 24 24"><path d="M13.5 5.5a2 2 0 102-2 2 2 0 00-2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7 7 0 0019 13v-2a5 5 0 01-4.2-2.4l-1-1.6c-.4-.6-1-1-1.8-1-.3 0-.5.1-.8.1L6 6.3V11h2V7.6z"/></svg>';
 const BUSSVG='<svg viewBox="0 0 24 24"><path d="M4 16c0 .9.4 1.7 1 2.2V20a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.8c.6-.5 1-1.3 1-2.2V6c0-3.5-4-4-8-4S4 2.5 4 6zm3.5 1A1.5 1.5 0 119 15.5 1.5 1.5 0 017.5 17zm9 0a1.5 1.5 0 111.5-1.5 1.5 1.5 0 01-1.5 1.5zM18 11H6V6h12z"/></svg>';
+const CARSVG='<svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm11 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM5 11l1.5-4.5h11L19 11H5z"/></svg>';
+const BIKESVG='<svg viewBox="0 0 24 24"><path d="M15.5 5.5a2 2 0 100-4 2 2 0 000 4zM5 12a5 5 0 105 5 5 5 0 00-5-5zm0 8.5A3.5 3.5 0 118.5 17 3.5 3.5 0 015 20.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.6 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12a5 5 0 105 5 5 5 0 00-5-5zm0 8.5a3.5 3.5 0 113.5-3.5 3.5 3.5 0 01-3.5 3.5z"/></svg>';
 const fmt=s=>{const m=Math.round(s/60);return m<60?`${m} mín`:`${Math.floor(m/60)} klst ${m%60} mín`;};
 const hhmm=ms=>new Date(ms).toLocaleTimeString('is-IS',{hour:'2-digit',minute:'2-digit',hour12:false});
 const walkStr=m=>m>=1000?`${(m/1000).toFixed(1).replace('.',',')} km`:`${Math.round(m)} m`;
 const xfer=n=>`${n} ${n%10===1&&n%100!==11?'skipting':'skiptingar'}`;
+// per-route colours: prefer the official plan colour (GTFS route_color), else trunk/feeder blue
+const contrast=h=>{const c=h.replace('#','');const r=parseInt(c.slice(0,2),16),g=parseInt(c.slice(2,4),16),b=parseInt(c.slice(4,6),16);
+  return (0.299*r+0.587*g+0.114*b)/255>0.6?'#202124':'#fff';};
+const lineColor=l=>l.route&&l.route.color?'#'+l.route.color:(l.route&&TRUNK.has(l.route.shortName)?'#007ab8':'#1a73e8');
+const lineText=l=>l.route&&l.route.textColor?'#'+l.route.textColor:contrast(lineColor(l));
 
 function render(its){
   if(!its||!its.length){results.innerHTML='<div class="msg">Engin leið fannst á þessum tíma. Prófaðu annan brottfarartíma.</div>';return;}
@@ -287,14 +331,21 @@ function render(its){
     const div=document.createElement('div'); div.className='it'+(idx===0?' sel':''); div.dataset.idx=idx;
     const legs=it.legs.filter(l=>l.mode!=='WALK'||l.duration>30).map(l=>{
       if(l.mode==='WALK')return `<span class="chip walk">${WALKSVG}${Math.round(l.duration/60)}</span>`;
+      if(l.mode==='CAR')return `<span class="chip car">${CARSVG}akstur</span>`;
+      if(l.mode==='BICYCLE')return `<span class="chip bike">${BIKESVG}hjól</span>`;
       const sn=(l.route&&l.route.shortName)||'?';
-      return `<span class="chip ${TRUNK.has(sn)?'trunk':'bus'}">${BUSSVG}${sn}</span>`;
+      return `<span class="chip" style="background:${lineColor(l)};color:${lineText(l)}">${BUSSVG}${sn}</span>`;
     }).join('<span class="arrow">›</span>');
     const tag=idx===0?'<span class="badge">Mælt með</span>':(it.duration===fastest?'<span class="badge">Fljótast</span>':'');
+    const totDist=it.legs.reduce((s,l)=>s+(l.distance||0),0);
+    const stops=it.legs.reduce((s,l)=>s+(l.route?((l.intermediateStops?l.intermediateStops.length:0)+1):0),0);
+    const sub=mode==='CAR'?`${walkStr(totDist)} akstur`
+             :mode==='BICYCLE'?`${walkStr(totDist)} hjólað`
+             :`${walkStr(totDist)} · ${xfer(it.numberOfTransfers)} · ${stops} stopp · ${walkStr(it.walkDistance)} gangandi`;
     div.innerHTML=`<div class="legs">${legs||'<span class="chip walk">'+WALKSVG+'ganga</span>'}</div>
       <div class="row"><span class="dur ${idx>0&&it.duration===fastest?'alt':''}">${fmt(it.duration)}${tag}</span>
         <span class="span">${hhmm(it.startTime)} – ${hhmm(it.endTime)}</span></div>
-      <div class="sub">${xfer(it.numberOfTransfers)} · ${walkStr(it.walkDistance)} gangandi</div>`;
+      <div class="sub">${sub}</div>`;
     div.onclick=()=>select(idx);
     results.appendChild(div);
   });
@@ -326,10 +377,19 @@ function draw(sel){
     if(l.mode==='WALK'){
       L.polyline(pts,{color:'#1a73e8',weight:4,opacity:.9,dashArray:'1,9',lineCap:'round'}).addTo(routeLayer);
     }else{
-      const c=l.route&&TRUNK.has(l.route.shortName)?'#007ab8':'#1a73e8';
+      const c=l.mode==='CAR'?'#137333':l.mode==='BICYCLE'?'#b5560a':lineColor(l);
       L.polyline(pts,{color:'#fff',weight:9,opacity:1}).addTo(routeLayer);
       L.polyline(pts,{color:c,weight:6,opacity:1}).addTo(routeLayer);
     }});
+  // transit stops along the selected route: intermediates as small dots, board/alight as bigger rings
+  it.legs.forEach(l=>{ if(!l.route)return; const c=lineColor(l);
+    (l.intermediateStops||[]).forEach(s=>{ if(s.lat==null)return;
+      L.circleMarker([s.lat,s.lon],{radius:3.5,color:'#fff',weight:1.5,fillColor:c,fillOpacity:1})
+        .bindTooltip(s.name).addTo(routeLayer);});
+    [l.from,l.to].forEach(s=>{ if(!s||s.lat==null)return;
+      L.circleMarker([s.lat,s.lon],{radius:5.5,color:c,weight:2.5,fillColor:'#fff',fillOpacity:1})
+        .bindTooltip(s.name,{direction:'top'}).addTo(routeLayer);});
+  });
   if(bounds.length)map.fitBounds(L.latLngBounds(bounds).pad(0.18),{paddingTopLeft:[20,20]});
 }
 
