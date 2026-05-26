@@ -61,6 +61,8 @@
   .opts select:focus,.opts input:focus{outline:none;border-color:var(--blue);}
   .divider{height:1px;background:var(--line);}
   /* results */
+  #sheet{flex:1;display:flex;flex-direction:column;min-height:0;}
+  .grip{display:none;}
   #results{overflow:auto;flex:1;}
   .it{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;border-left:4px solid transparent;}
   .it:hover{background:var(--hov);}
@@ -94,15 +96,22 @@
     .controls{pointer-events:auto;background:#fff;box-shadow:var(--shadow);
               border-radius:0 0 14px 14px;}
     .controls input,.opts select,.opts input{font-size:16px;} /* avoid iOS zoom-on-focus */
-    #results{pointer-events:auto;position:fixed;left:0;right:0;bottom:0;
-             max-height:45vh;background:#fff;border-radius:16px 16px 0 0;
-             box-shadow:0 -2px 12px rgba(60,64,67,.25);padding-top:10px;}
-    #results::before{content:"";position:absolute;top:6px;left:50%;transform:translateX(-50%);
-             width:36px;height:4px;border-radius:2px;background:#dadce0;}
-    #results:empty,#results .msg{min-height:0;}
+    .dirbox{padding:12px 12px 8px;} .opts{padding:2px 14px 10px;}
+
+    /* draggable bottom sheet: peek / mid / full, set by JS via translateY */
+    #sheet{pointer-events:auto;position:fixed;left:0;right:0;bottom:0;height:88vh;
+           background:#fff;border-radius:16px 16px 0 0;box-shadow:0 -2px 12px rgba(60,64,67,.25);
+           display:flex;flex-direction:column;z-index:1100;
+           transform:translateY(40vh);transition:transform .28s cubic-bezier(.4,0,.2,1);}
+    #sheet.dragging{transition:none;}
+    .grip{display:block;flex:none;height:26px;position:relative;cursor:grab;touch-action:none;}
+    .grip:active{cursor:grabbing;}
+    .grip::before{content:"";position:absolute;top:10px;left:50%;transform:translateX(-50%);
+           width:40px;height:5px;border-radius:3px;background:#c4c7c5;}
+    #results{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
     .sug{max-height:40vh;overflow:auto;}
     .leaflet-control-zoom{display:none;}            /* pinch to zoom on touch */
-    .leaflet-control-attribution{margin-bottom:46vh;} /* keep credit above the sheet */
+    .leaflet-control-attribution{display:none;}
   }
 </style>
 </head>
@@ -168,7 +177,10 @@
     </div>
     <div class="divider"></div>
     </div><!-- /controls -->
-    <div id="results"><div class="msg">Sláðu inn upphafsstað og áfangastað til að sjá leiðir á fyrirhugaðri Borgarlínu.</div></div>
+    <div id="sheet">
+      <div class="grip" id="grip"></div>
+      <div id="results"><div class="msg">Sláðu inn upphafsstað og áfangastað til að sjá leiðir á fyrirhugaðri Borgarlínu.</div></div>
+    </div>
   </div>
   <div id="map"></div>
 </div>
@@ -192,6 +204,31 @@ setTimeout(()=>map.invalidateSize(),200);
 const $=id=>document.getElementById(id);
 const fromq=$('fromq'),toq=$('toq'),fromsug=$('fromsug'),tosug=$('tosug'),results=$('results');
 let A=null,B=null,mA=null,mB=null,mode='TRANSIT',routeLayer=L.layerGroup().addTo(map),currentIts=[];
+
+// ---- mobile bottom sheet: drag the grip to snap peek / mid / full -----------
+const isMobile=()=>matchMedia('(max-width:700px)').matches;
+const sheet=$('sheet'), grip=$('grip');
+let snapY={full:0,mid:0,peek:0}, sheetState='peek', dragging=false, startY=0, startTy=0, moved=false;
+function calcSnaps(){const vh=innerHeight;
+  snapY={ full:Math.round(vh*0.04), mid:Math.round(vh*0.42), peek:Math.round(vh*0.88-104) };}
+function applySheet(){ sheet.style.transform = isMobile() ? `translateY(${snapY[sheetState]}px)` : ''; }
+function snapTo(state){ sheetState=state; applySheet(); }
+const curTy=()=>{const m=/translateY\(([-\d.]+)px\)/.exec(sheet.style.transform);return m?parseFloat(m[1]):snapY[sheetState];};
+calcSnaps(); applySheet();
+addEventListener('resize',()=>{ calcSnaps(); if(!dragging) applySheet(); });
+grip.addEventListener('pointerdown',e=>{ if(!isMobile())return;
+  dragging=true; moved=false; startY=e.clientY; startTy=curTy();
+  sheet.classList.add('dragging'); grip.setPointerCapture(e.pointerId); });
+grip.addEventListener('pointermove',e=>{ if(!dragging)return;
+  if(Math.abs(e.clientY-startY)>4) moved=true;
+  const ty=Math.max(snapY.full,Math.min(snapY.peek,startTy+(e.clientY-startY)));
+  sheet.style.transform=`translateY(${ty}px)`; });
+function endDrag(){ if(!dragging)return; dragging=false; sheet.classList.remove('dragging');
+  if(!moved){ snapTo(sheetState==='peek'?'mid':'peek'); return; }   // tap toggles peek/mid
+  const ty=curTy(); let best='mid',bd=1e9;
+  for(const s in snapY){ const d=Math.abs(ty-snapY[s]); if(d<bd){bd=d;best=s;} }
+  snapTo(best); }
+grip.addEventListener('pointerup',endDrag); grip.addEventListener('pointercancel',endDrag);
 
 // ---- Google-ish markers: origin ring, destination red pin -------------------
 const originIcon=L.divIcon({className:'',iconSize:[18,18],iconAnchor:[9,9],
@@ -353,9 +390,10 @@ function render(its){
       <div class="row"><span class="dur ${idx>0&&it.duration===fastest?'alt':''}">${fmt(it.duration)}${tag}</span>
         <span class="span">${hhmm(it.startTime)} – ${hhmm(it.endTime)}</span></div>
       <div class="sub">${sub}</div>`;
-    div.onclick=()=>select(idx);
+    div.onclick=()=>{ select(idx); if(isMobile()) snapTo('peek'); };  // tap a route -> reveal it on the map
     results.appendChild(div);
   });
+  if(isMobile()) snapTo('mid');
   select(0);
 }
 
@@ -397,7 +435,15 @@ function draw(sel){
       L.circleMarker([s.lat,s.lon],{radius:5.5,color:c,weight:2.5,fillColor:'#fff',fillOpacity:1})
         .bindTooltip(s.name,{direction:'top'}).addTo(routeLayer);});
   });
-  if(bounds.length)map.fitBounds(L.latLngBounds(bounds).pad(0.18),{paddingTopLeft:[20,20]});
+  if(bounds.length){
+    let pTL=[20,20], pBR=[20,20];
+    if(isMobile()){                                    // keep route clear of the top card + bottom sheet
+      const ctrlH=document.querySelector('.controls').offsetHeight;
+      const vis=Math.max(20, Math.round(innerHeight*0.88 - snapY[sheetState]));  // visible sheet height
+      pTL=[20, ctrlH+16]; pBR=[20, vis+16];
+    }
+    map.fitBounds(L.latLngBounds(bounds).pad(0.18),{paddingTopLeft:pTL,paddingBottomRight:pBR});
+  }
 }
 
 loadHash();
