@@ -1,0 +1,10 @@
+otp
+node_modules
+gtfs
+gtfs.zip
+scripts/*.mjs
+web/preview*.png
+.git
+.github
+*.log
+README.md

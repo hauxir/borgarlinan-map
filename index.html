@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Borgarlínan map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#1a73e8; --blue-d:#1967d2; --trunk:#007ab8;
+    --ink:#202124; --sec:#5f6368; --line:#dadce0; --hov:#f1f3f4; --bg:#fff;
+    --shadow:0 1px 3px rgba(60,64,67,.3),0 4px 8px 3px rgba(60,64,67,.15);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;font-family:Roboto,Arial,sans-serif;color:var(--ink);}
+  #app{display:flex;height:100%;}
+  /* ---- left directions pane (Google places it on the left) ---- */
+  #pane{width:408px;min-width:408px;height:100%;background:var(--bg);
+        display:flex;flex-direction:column;box-shadow:var(--shadow);z-index:1000;}
+  #map{flex:1;}
+  .topbar{background:var(--blue);color:#fff;padding:10px 12px 0;position:relative;}
+  .gh{position:absolute;top:8px;right:10px;color:#fff;opacity:.7;display:flex;}
+  .gh:hover{opacity:1;}
+  .gh svg{width:20px;height:20px;fill:currentColor;}
+  .modes{display:flex;gap:2px;padding-right:28px;}
+  .mode{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+        padding:10px 4px;cursor:pointer;border-bottom:3px solid transparent;
+        color:#d2e3fc;font-size:13px;border-radius:8px 8px 0 0;}
+  .mode svg{width:20px;height:20px;fill:currentColor;}
+  .mode.active{color:#fff;border-bottom-color:#fff;}
+  .mode:hover:not(.active){background:rgba(255,255,255,.12);}
+  /* origin/destination box */
+  .dirbox{display:flex;align-items:stretch;gap:8px;padding:14px 14px 10px;}
+  .conn{display:flex;flex-direction:column;align-items:center;width:14px;padding:6px 0;}
+  .conn .o{width:11px;height:11px;border-radius:50%;border:2px solid #9aa0a6;background:#fff;}
+  .conn .d{width:13px;height:13px;color:#ea4335;}
+  .conn .l{flex:1;width:0;border-left:2px dotted #9aa0a6;margin:3px 0;}
+  .fields{flex:1;display:flex;flex-direction:column;gap:8px;}
+  .field{position:relative;}
+  .field input{width:100%;border:1px solid var(--line);border-radius:8px;
+        padding:9px 12px;font-size:14px;font-family:inherit;background:#fff;}
+  .field input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 1px var(--blue);}
+  .swap{align-self:center;border:none;background:#fff;color:var(--sec);cursor:pointer;
+        width:32px;height:32px;border-radius:50%;font-size:17px;}
+  .swap:hover{background:var(--hov);}
+  .sug{position:absolute;left:0;right:0;top:42px;z-index:1200;background:#fff;
+       border-radius:8px;box-shadow:var(--shadow);overflow:hidden;display:none;}
+  .sug.open{display:block;}
+  .sug div{padding:9px 12px;font-size:13px;cursor:pointer;display:flex;gap:8px;align-items:center;}
+  .sug div:hover{background:var(--hov);}
+  .sug div::before{content:"";width:14px;height:14px;flex:none;
+       background:no-repeat center/contain url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%235f6368"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1112 6a2.5 2.5 0 010 5.5z"/></svg>');}
+  /* options row */
+  .opts{display:flex;align-items:center;gap:8px;padding:4px 16px 12px;color:var(--sec);font-size:13px;}
+  .opts svg{width:18px;height:18px;fill:var(--sec);flex:none;}
+  .opts select,.opts input{border:1px solid var(--line);border-radius:6px;padding:6px 8px;
+        font-size:13px;font-family:inherit;color:var(--ink);background:#fff;}
+  .opts select:focus,.opts input:focus{outline:none;border-color:var(--blue);}
+  .divider{height:1px;background:var(--line);}
+  /* results */
+  #results{overflow:auto;flex:1;}
+  .it{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;border-left:4px solid transparent;}
+  .it:hover{background:var(--hov);}
+  .it.sel{border-left-color:var(--blue);background:#e8f0fe;}
+  .it .legs{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
+  .chip{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:500;
+        padding:3px 9px;border-radius:13px;color:#fff;}
+  .chip.trunk{background:var(--trunk);} .chip.bus{background:#1a73e8;}
+  .chip.walk{background:#f1f3f4;color:#5f6368;padding:3px 7px;}
+  .chip svg{width:14px;height:14px;fill:currentColor;}
+  .arrow{color:#9aa0a6;font-size:12px;}
+  .it .row{display:flex;justify-content:space-between;align-items:baseline;}
+  .it .dur{font-size:18px;font-weight:500;color:var(--ink);}
+  .it .dur.alt{color:var(--blue);}
+  .it .span{font-size:13px;color:var(--sec);}
+  .it .sub{font-size:12px;color:var(--sec);margin-top:2px;}
+  .it .badge{font-size:11px;font-weight:500;color:var(--blue);border:1px solid var(--blue);
+        border-radius:4px;padding:0 5px;margin-left:8px;vertical-align:middle;}
+  .msg{padding:18px 16px;color:var(--sec);font-size:13px;}
+  .err{color:#d93025;}
+  .leaflet-container{font:inherit;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="pane">
+    <div class="topbar">
+      <a class="gh" href="https://github.com/hauxir/borgarlinan-map" target="_blank" rel="noopener" title="Kóði á GitHub">
+        <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+      <div class="modes">
+        <div class="mode active" data-mode="TRANSIT" title="Borgarlínan">
+          <svg viewBox="0 0 24 24"><path d="M12 2c-4 0-8 .5-8 4v9.5A3.5 3.5 0 007.5 19L6 20.5v.5h12v-.5L16.5 19a3.5 3.5 0 003.5-3.5V6c0-3.5-4-4-8-4zM7.5 17A1.5 1.5 0 119 15.5 1.5 1.5 0 017.5 17zm3.5-7H6V6h5zm2 0V6h5v4zm3.5 7a1.5 1.5 0 111.5-1.5 1.5 1.5 0 01-1.5 1.5z"/></svg>
+          Borgarlínan
+        </div>
+        <div class="mode" data-mode="WALK" title="Gangandi">
+          <svg viewBox="0 0 24 24"><path d="M13.5 5.5a2 2 0 102-2 2 2 0 00-2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7 7 0 0019 13v-2a5 5 0 01-4.2-2.4l-1-1.6c-.4-.6-1-1-1.8-1-.3 0-.5.1-.8.1L6 6.3V11h2V7.6l1.8-.7"/></svg>
+          Gangandi
+        </div>
+      </div>
+    </div>
+
+    <div class="dirbox">
+      <div class="conn">
+        <span class="o"></span>
+        <span class="l"></span>
+        <svg class="d" viewBox="0 0 24 24" fill="#ea4335"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7z"/></svg>
+      </div>
+      <div class="fields">
+        <div class="field"><input id="fromq" placeholder="Veldu upphafsstað eða smelltu á kortið" autocomplete="off"><div class="sug" id="fromsug"></div></div>
+        <div class="field"><input id="toq" placeholder="Veldu áfangastað" autocomplete="off"><div class="sug" id="tosug"></div></div>
+      </div>
+      <button class="swap" id="swap" title="Snúa við">⇅</button>
+    </div>
+
+    <div class="opts">
+      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm1 11h-5v-2h3V7h2z"/></svg>
+      <select id="day">
+        <option value="2026-06-03">Virkur dagur</option>
+        <option value="2026-06-06">Laugardagur</option>
+        <option value="2026-06-07">Sunnudagur</option>
+      </select>
+      <span>kl.</span>
+      <input id="time" type="time" value="08:00">
+    </div>
+    <div class="divider"></div>
+    <div id="results"><div class="msg">Sláðu inn upphafsstað og áfangastað til að sjá leiðir á fyrirhugaðri Borgarlínu.</div></div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// API is same-origin (served by the same server that proxies OTP). Override with ?otp=HOST.
+const OTP_HOST = new URLSearchParams(location.search).get('otp')
+  || (location.protocol.startsWith('http') ? location.origin : 'https://otp.borgarlinan.kosmi.dev');
+const OTP = OTP_HOST + "/otp/routers/default/index/graphql";
+const TRUNK = new Set("ABCDEFG".split(""));
+
+const map = L.map('map',{zoomControl:true}).setView([64.115,-21.90],12);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  {attribution:'© OpenStreetMap, © CARTO',maxZoom:20}).addTo(map);
+
+const $=id=>document.getElementById(id);
+const fromq=$('fromq'),toq=$('toq'),fromsug=$('fromsug'),tosug=$('tosug'),results=$('results');
+let A=null,B=null,mA=null,mB=null,mode='TRANSIT',routeLayer=L.layerGroup().addTo(map),currentIts=[];
+
+// ---- Google-ish markers: origin ring, destination red pin -------------------
+const originIcon=L.divIcon({className:'',iconSize:[18,18],iconAnchor:[9,9],
+  html:'<div style="width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid #1a73e8;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>'});
+const destIcon=L.divIcon({className:'',iconSize:[28,40],iconAnchor:[14,38],
+  html:'<svg width="28" height="40" viewBox="0 0 24 36"><path fill="#ea4335" stroke="#b31412" stroke-width=".5" d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z"/><circle cx="12" cy="12" r="4.5" fill="#fff"/></svg>'});
+
+const coord=ll=>`${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`;
+const maybePlan=()=>{ if(A&&B) plan(); };
+function setA(ll,label){A=ll; if(mA)map.removeLayer(mA); mA=L.marker(ll,{icon:originIcon,zIndexOffset:500}).addTo(map);
+  if(label!==undefined)fromq.value=label; updateHash(); maybePlan();}
+function setB(ll,label){B=ll; if(mB)map.removeLayer(mB); mB=L.marker(ll,{icon:destIcon,zIndexOffset:600}).addTo(map);
+  if(label!==undefined)toq.value=label; updateHash(); maybePlan();}
+
+map.on('click',e=>{
+  if(!A||(A&&B)){ if(mB){map.removeLayer(mB);mB=null;} B=null; toq.value=''; routeLayer.clearLayers(); results.innerHTML='';
+    setA(e.latlng,coord(e.latlng)); }
+  else setB(e.latlng,coord(e.latlng));
+});
+
+$('swap').onclick=()=>{
+  if(!A&&!B) return;
+  [A,B]=[B,A]; const fv=fromq.value; fromq.value=toq.value; toq.value=fv;
+  if(mA)map.removeLayer(mA); if(mB)map.removeLayer(mB); mA=mB=null;
+  if(A)mA=L.marker(A,{icon:originIcon,zIndexOffset:500}).addTo(map);
+  if(B)mB=L.marker(B,{icon:destIcon,zIndexOffset:600}).addTo(map);
+  updateHash(); maybePlan();
+};
+document.querySelectorAll('.mode').forEach(el=>el.onclick=()=>{
+  document.querySelectorAll('.mode').forEach(m=>m.classList.remove('active'));
+  el.classList.add('active'); mode=el.dataset.mode; maybePlan();
+});
+['day','time'].forEach(id=>$(id).onchange=()=>{ updateHash(); maybePlan(); });
+
+// ---- shareable URL (state in the hash) --------------------------------------
+function updateHash(){
+  const p=new URLSearchParams();
+  if(A)p.set('f',`${A.lat.toFixed(5)},${A.lng.toFixed(5)}`);
+  if(B)p.set('t',`${B.lat.toFixed(5)},${B.lng.toFixed(5)}`);
+  p.set('d',$('day').value); p.set('ti',$('time').value); if(mode!=='TRANSIT')p.set('m',mode);
+  if(fromq.value)p.set('fl',fromq.value); if(toq.value)p.set('tl',toq.value);
+  history.replaceState(null,'',(A||B)?'#'+p.toString():location.pathname+location.search);
+}
+function loadHash(){
+  const h=location.hash.slice(1); if(!h)return;
+  const p=new URLSearchParams(h),ll=s=>{const[a,o]=s.split(',').map(Number);return L.latLng(a,o);};
+  if(p.get('d'))$('day').value=p.get('d'); if(p.get('ti'))$('time').value=p.get('ti');
+  if(p.get('m')){mode=p.get('m'); document.querySelectorAll('.mode').forEach(m=>m.classList.toggle('active',m.dataset.mode===mode));}
+  if(p.get('f')){A=ll(p.get('f')); mA=L.marker(A,{icon:originIcon,zIndexOffset:500}).addTo(map); fromq.value=p.get('fl')||coord(A);}
+  if(p.get('t')){B=ll(p.get('t')); mB=L.marker(B,{icon:destIcon,zIndexOffset:600}).addTo(map); toq.value=p.get('tl')||coord(B);}
+  if(A&&B){map.fitBounds(L.latLngBounds([A,B]).pad(0.4)); plan();} else if(A||B) map.setView(A||B,13);
+}
+
+// ---- address autocomplete (Nominatim, capital region) -----------------------
+function geo(input,sugEl,which){
+  let t;
+  input.addEventListener('input',()=>{clearTimeout(t); const q=input.value.trim();
+    if(q.length<3){sugEl.classList.remove('open');return;} t=setTimeout(()=>lookup(q,sugEl,which),350);});
+  input.addEventListener('keydown',e=>{ if(e.key==='Enter'){const f=sugEl.querySelector('div'); if(f)f.click();}});
+  document.addEventListener('click',e=>{ if(!sugEl.contains(e.target)&&e.target!==input) sugEl.classList.remove('open');});
+}
+async function lookup(q,sugEl,which){
+  const url='https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=is&viewbox=-22.30,64.25,-21.50,63.98&q='+encodeURIComponent(q);
+  try{
+    const list=await(await fetch(url,{headers:{Accept:'application/json'}})).json();
+    sugEl.innerHTML=''; if(!list.length){sugEl.classList.remove('open');return;}
+    list.forEach(it=>{const d=document.createElement('div'); d.textContent=it.display_name.replace(/, Ísland$/,'');
+      d.onclick=()=>{const p=L.latLng(parseFloat(it.lat),parseFloat(it.lon)); sugEl.classList.remove('open');
+        const label=it.display_name.split(',').slice(0,2).join(',').trim();
+        (which==='a'?setA:setB)(p,label); map.setView(p,Math.max(map.getZoom(),13));};
+      sugEl.appendChild(d);});
+    sugEl.classList.add('open');
+  }catch(e){sugEl.classList.remove('open');}
+}
+geo(fromq,fromsug,'a'); geo(toq,tosug,'b');
+
+// ---- routing ----------------------------------------------------------------
+const Q=`query($fLat:Float!,$fLon:Float!,$tLat:Float!,$tLon:Float!,$d:String!,$ti:String!,$modes:[TransportMode!]){
+  plan(from:{lat:$fLat,lon:$fLon},to:{lat:$tLat,lon:$tLon},date:$d,time:$ti,numItineraries:6,
+       transportModes:$modes){
+    itineraries{ duration walkDistance numberOfTransfers startTime endTime
+      legs{ mode duration distance startTime endTime route{shortName} legGeometry{points} from{name} to{name} } } } }`;
+
+async function plan(){
+  results.innerHTML='<div class="msg">Leita að leiðum…</div>';
+  const modes = mode==='WALK' ? [{mode:'WALK'}] : [{mode:'WALK'},{mode:'TRANSIT'}];
+  const vars={fLat:A.lat,fLon:A.lng,tLat:B.lat,tLon:B.lng,d:$('day').value,ti:$('time').value+":00",modes};
+  try{
+    const r=await fetch(OTP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:Q,variables:vars})});
+    const j=await r.json();
+    if(j.errors){results.innerHTML='<div class="msg err">'+j.errors[0].message+'</div>';return;}
+    render(j.data.plan.itineraries);
+  }catch(err){console.warn('plan() failed:',err);
+    results.innerHTML='<div class="msg err">Náði ekki sambandi við leiðavélina á '+new URL(OTP).host+'.</div>';}
+}
+
+const TRANSFER_LEEWAY=600; // accept up to 10 min extra to drop a transfer
+function rank(its){const fastest=Math.min(...its.map(i=>i.duration));
+  return its.slice().sort((a,b)=>{const aIn=a.duration<=fastest+TRANSFER_LEEWAY,bIn=b.duration<=fastest+TRANSFER_LEEWAY;
+    if(aIn!==bIn)return aIn?-1:1; if(aIn&&a.numberOfTransfers!==b.numberOfTransfers)return a.numberOfTransfers-b.numberOfTransfers;
+    return a.duration-b.duration;});}
+
+const WALKSVG='<svg viewBox="0 0 24 24"><path d="M13.5 5.5a2 2 0 102-2 2 2 0 00-2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7 7 0 0019 13v-2a5 5 0 01-4.2-2.4l-1-1.6c-.4-.6-1-1-1.8-1-.3 0-.5.1-.8.1L6 6.3V11h2V7.6z"/></svg>';
+const BUSSVG='<svg viewBox="0 0 24 24"><path d="M4 16c0 .9.4 1.7 1 2.2V20a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.8c.6-.5 1-1.3 1-2.2V6c0-3.5-4-4-8-4S4 2.5 4 6zm3.5 1A1.5 1.5 0 119 15.5 1.5 1.5 0 017.5 17zm9 0a1.5 1.5 0 111.5-1.5 1.5 1.5 0 01-1.5 1.5zM18 11H6V6h12z"/></svg>';
+const fmt=s=>{const m=Math.round(s/60);return m<60?`${m} mín`:`${Math.floor(m/60)} klst ${m%60} mín`;};
+const hhmm=ms=>new Date(ms).toLocaleTimeString('is-IS',{hour:'2-digit',minute:'2-digit',hour12:false});
+const walkStr=m=>m>=1000?`${(m/1000).toFixed(1).replace('.',',')} km`:`${Math.round(m)} m`;
+const xfer=n=>`${n} ${n%10===1&&n%100!==11?'skipting':'skiptingar'}`;
+
+function render(its){
+  if(!its||!its.length){results.innerHTML='<div class="msg">Engin leið fannst á þessum tíma. Prófaðu annan brottfarartíma.</div>';return;}
+  currentIts=rank(its); const fastest=Math.min(...currentIts.map(i=>i.duration));
+  results.innerHTML='';
+  currentIts.forEach((it,idx)=>{
+    const div=document.createElement('div'); div.className='it'+(idx===0?' sel':''); div.dataset.idx=idx;
+    const legs=it.legs.filter(l=>l.mode!=='WALK'||l.duration>30).map(l=>{
+      if(l.mode==='WALK')return `<span class="chip walk">${WALKSVG}${Math.round(l.duration/60)}</span>`;
+      const sn=(l.route&&l.route.shortName)||'?';
+      return `<span class="chip ${TRUNK.has(sn)?'trunk':'bus'}">${BUSSVG}${sn}</span>`;
+    }).join('<span class="arrow">›</span>');
+    const tag=idx===0?'<span class="badge">Mælt með</span>':(it.duration===fastest?'<span class="badge">Fljótast</span>':'');
+    div.innerHTML=`<div class="legs">${legs||'<span class="chip walk">'+WALKSVG+'ganga</span>'}</div>
+      <div class="row"><span class="dur ${idx>0&&it.duration===fastest?'alt':''}">${fmt(it.duration)}${tag}</span>
+        <span class="span">${hhmm(it.startTime)} – ${hhmm(it.endTime)}</span></div>
+      <div class="sub">${xfer(it.numberOfTransfers)} · ${walkStr(it.walkDistance)} gangandi</div>`;
+    div.onclick=()=>select(idx);
+    results.appendChild(div);
+  });
+  select(0);
+}
+
+function select(idx){
+  document.querySelectorAll('.it').forEach(e=>e.classList.toggle('sel',+e.dataset.idx===idx));
+  draw(idx);
+}
+
+function decode(str){let i=0,lat=0,lng=0,co=[];
+  while(i<str.length){let r,s=0,res=0;
+    do{r=str.charCodeAt(i++)-63;res|=(r&0x1f)<<s;s+=5;}while(r>=0x20);
+    lat+=(res&1)?~(res>>1):(res>>1);s=0;res=0;
+    do{r=str.charCodeAt(i++)-63;res|=(r&0x1f)<<s;s+=5;}while(r>=0x20);
+    lng+=(res&1)?~(res>>1):(res>>1);co.push([lat/1e5,lng/1e5]);}
+  return co;}
+
+function draw(sel){
+  routeLayer.clearLayers();
+  // alternatives in gray, underneath
+  currentIts.forEach((it,i)=>{ if(i===sel)return;
+    it.legs.forEach(l=>{ if(!l.legGeometry)return;
+      L.polyline(decode(l.legGeometry.points),{color:'#bdc1c6',weight:5,opacity:.8}).addTo(routeLayer);});});
+  // selected on top: white casing + colored line; walking dotted
+  const it=currentIts[sel],bounds=[];
+  it.legs.forEach(l=>{ if(!l.legGeometry)return; const pts=decode(l.legGeometry.points); bounds.push(...pts);
+    if(l.mode==='WALK'){
+      L.polyline(pts,{color:'#1a73e8',weight:4,opacity:.9,dashArray:'1,9',lineCap:'round'}).addTo(routeLayer);
+    }else{
+      const c=l.route&&TRUNK.has(l.route.shortName)?'#007ab8':'#1a73e8';
+      L.polyline(pts,{color:'#fff',weight:9,opacity:1}).addTo(routeLayer);
+      L.polyline(pts,{color:c,weight:6,opacity:1}).addTo(routeLayer);
+    }});
+  if(bounds.length)map.fitBounds(L.latLngBounds(bounds).pad(0.18),{paddingTopLeft:[20,20]});
+}
+
+loadHash();
+</script>
+</body>
+</html>

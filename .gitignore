@@ -1,0 +1,11 @@
+# build inputs/outputs fetched or generated at build time
+otp/otp-shaded.jar
+otp/*.osm.pbf
+otp/graph/
+gtfs/
+gtfs.zip
+
+# dev
+node_modules/
+*.log
+.DS_Store
