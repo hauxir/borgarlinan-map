@@ -453,7 +453,7 @@ function modeTimes(){
   });
 }
 
-const TRANSFER_LEEWAY=600; // accept up to 10 min extra to drop a transfer
+const TRANSFER_LEEWAY=60; // fastest first; only prefer fewer transfers when it costs <=1 min
 function rank(its){const fastest=Math.min(...its.map(i=>i.duration));
   return its.slice().sort((a,b)=>{const aIn=a.duration<=fastest+TRANSFER_LEEWAY,bIn=b.duration<=fastest+TRANSFER_LEEWAY;
     if(aIn!==bIn)return aIn?-1:1; if(aIn&&a.numberOfTransfers!==b.numberOfTransfers)return a.numberOfTransfers-b.numberOfTransfers;
