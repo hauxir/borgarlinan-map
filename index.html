@@ -386,6 +386,7 @@ function fieldAt(lat, lon, bi){
   return best?best[bi]:1;
 }
 function carFactor(encoded, bucket){          // length-weighted field factor over the route
+  if(!trafficOn||!bucket) return 1;           // self-gated like legFactor, so the car tab clears when off
   const bi=FIELD.buckets.indexOf(bucket); if(bi<0||!encoded) return 1;
   const pts=decode(encoded); if(pts.length<2) return 1;
   let acc=0,tot=0;
