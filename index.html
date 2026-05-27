@@ -59,12 +59,12 @@
   .opts select,.opts input{border:1px solid var(--line);border-radius:6px;padding:6px 8px;
         font-size:13px;font-family:inherit;color:var(--ink);background:#fff;}
   .opts select:focus,.opts input:focus{outline:none;border-color:var(--blue);}
-  .opts .sw{margin-left:auto;display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;white-space:nowrap;}
-  .opts .sw input{display:none;}
-  .opts .sw .track{width:34px;height:18px;border-radius:9px;background:#c4c7c5;position:relative;transition:background .15s;flex:none;}
-  .opts .sw .track::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s;}
-  .opts .sw input:checked + .track{background:var(--blue);}
-  .opts .sw input:checked + .track::after{transform:translateX(16px);}
+  .opts .ttoggle{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);
+        background:#fff;color:var(--sec);border-radius:14px;padding:5px 11px;font-size:12px;
+        font-family:inherit;cursor:pointer;white-space:nowrap;margin-left:auto;}
+  .opts .ttoggle:hover{background:var(--hov);}
+  .opts .ttoggle.on{background:#fce8e6;border-color:#f3b7b1;color:#c5221f;font-weight:500;}
+  .opts .ttoggle .dot{width:8px;height:8px;border-radius:50%;background:#c5221f;}
   .divider{height:1px;background:var(--line);}
   /* results */
   #sheet{flex:1;display:flex;flex-direction:column;min-height:0;}
@@ -85,8 +85,8 @@
   .it .row{display:flex;justify-content:space-between;align-items:baseline;}
   .it .dur{font-size:18px;font-weight:500;color:var(--ink);}
   .it .dur.alt{color:var(--blue);}
-  .it .dur.tmod,.mode .mt.tmod{color:#e8710a;}      /* slowed by traffic */
-  .it .dur.theavy,.mode .mt.theavy{color:#d93025;}  /* heavy traffic */
+  .it .tdelay{color:#c5221f;font-weight:500;}       /* "+X mín umferð" note */
+  .mode .mt.tjam{color:#ffd5cd;}                    /* tint the tab when traffic slows it */
   .it .span{font-size:13px;color:var(--sec);}
   .it .sub{font-size:12px;color:var(--sec);margin-top:2px;}
   .it .badge{font-size:11px;font-weight:500;color:var(--blue);border:1px solid var(--blue);
@@ -182,9 +182,8 @@
       </select>
       <span>kl.</span>
       <input id="time" type="time" value="08:00">
-      <label class="sw" title="Herma dæmigerða háannatíma-umferð fyrir Strætó og bíl (Borgarlínan er á sérakreinum og er óbreytt)">
-        <input type="checkbox" id="traffic" checked><span class="track"></span>Umferð
-      </label>
+      <button id="traffic" class="ttoggle on" title="Herma dæmigerða háannatíma-umferð fyrir Strætó og bíl (Borgarlínan er á sérakreinum og er óbreytt)">
+        <span class="dot"></span>Umferð</button>
     </div>
     <div class="divider"></div>
     </div><!-- /controls -->
@@ -276,7 +275,7 @@ document.querySelectorAll('.mode').forEach(el=>el.onclick=()=>{
   el.classList.add('active'); mode=el.dataset.mode; maybePlan();
 });
 ['day','time'].forEach(id=>$(id).onchange=()=>{ updateHash(); maybePlan(); });
-$('traffic').onchange=()=>{ trafficOn=$('traffic').checked; updateHash(); maybePlan(); };
+$('traffic').onclick=()=>{ trafficOn=!trafficOn; $('traffic').classList.toggle('on',trafficOn); updateHash(); maybePlan(); };
 
 // ---- shareable URL (state in the hash) --------------------------------------
 function updateHash(){
@@ -293,7 +292,7 @@ function loadHash(){
   const p=new URLSearchParams(h),ll=s=>{const[a,o]=s.split(',').map(Number);return L.latLng(a,o);};
   if(p.get('d'))$('day').value=p.get('d'); if(p.get('ti'))$('time').value=p.get('ti');
   if(p.get('m')){mode=p.get('m'); document.querySelectorAll('.mode').forEach(m=>m.classList.toggle('active',m.dataset.mode===mode));}
-  if(p.get('tr')==='0'){trafficOn=false; $('traffic').checked=false;}
+  if(p.get('tr')==='0'){trafficOn=false; $('traffic').classList.remove('on');}
   if(p.get('f')){A=ll(p.get('f')); mA=L.marker(A,{icon:originIcon,zIndexOffset:500}).addTo(map); fromq.value=p.get('fl')||coord(A);}
   if(p.get('t')){B=ll(p.get('t')); mB=L.marker(B,{icon:destIcon,zIndexOffset:600}).addTo(map); toq.value=p.get('tl')||coord(B);}
   if(A&&B){map.fitBounds(L.latLngBounds([A,B]).pad(0.4)); plan(); modeTimes();} else if(A||B) map.setView(A||B,13);
@@ -431,7 +430,6 @@ const MODE_DEFS=[['TRANSIT',[{mode:'WALK'},{mode:'TRANSIT'}]],['STRAETO',[{mode:
 const MTQ=`query($fLat:Float!,$fLon:Float!,$tLat:Float!,$tLon:Float!,$d:String!,$ti:String!,$modes:[TransportMode!]){
   plan(from:{lat:$fLat,lon:$fLon},to:{lat:$tLat,lon:$tLon},date:$d,time:$ti,numItineraries:4,transportModes:$modes){itineraries{duration legs{mode duration route{shortName} trip{directionId} from{lat lon} to{lat lon} legGeometry{points}}}}}`;
 const shortMin=s=>{const m=Math.round(s/60);return m<60?m+' mín':Math.floor(m/60)+' klst'+(m%60?' '+(m%60):'');};
-const trafficClass=r=> r>=1.3?'theavy': r>=1.1?'tmod':'';   // colour the time when traffic slows it
 let mtSeq=0;
 function modeTimes(){
   const seq=++mtSeq;  // a newer trip invalidates older in-flight results
@@ -449,7 +447,7 @@ function modeTimes(){
       const durs=its.map(i=> i.duration + (m==='STRAETO'?itinExtra(i,b): m==='CAR'?carExtra(i,b):0));  // car + Strætó pay traffic
       const withT=Math.min(...durs);
       el.textContent=shortMin(withT);
-      el.classList.remove('tmod','theavy'); const tc=trafficOn?trafficClass(withT/base):''; if(tc)el.classList.add(tc);
+      el.classList.toggle('tjam', trafficOn && withT-base>=60);   // tint the tab when traffic adds time
     }catch(e){ if(seq===mtSeq)el.textContent=''; }
   });
 }
@@ -490,11 +488,13 @@ function render(its){
     const tag=idx===0?'<span class="badge">Mælt með</span>':(it.duration===fastest?'<span class="badge">Fljótast</span>':'');
     const totDist=it.legs.reduce((s,l)=>s+(l.distance||0),0);
     const stops=it.legs.reduce((s,l)=>s+(l.route?((l.intermediateStops?l.intermediateStops.length:0)+1):0),0);
-    const sub=mode==='CAR'?`${walkStr(totDist)} akstur`
+    let sub=mode==='CAR'?`${walkStr(totDist)} akstur`
              :mode==='BICYCLE'?`${walkStr(totDist)} hjólað`
              :`${walkStr(totDist)} · ${xfer(it.numberOfTransfers)} · ${stops} stopp · ${walkStr(it.walkDistance)} gangandi`;
+    const delay=it._ff?it.duration-it._ff:0;
+    if(delay>=30) sub+=` · <span class="tdelay">+${Math.round(delay/60)} mín umferð</span>`;
     div.innerHTML=`<div class="legs">${legs||'<span class="chip walk">'+WALKSVG+'ganga</span>'}</div>
-      <div class="row"><span class="dur ${it._ff?trafficClass(it.duration/it._ff)+' ':''}${idx>0&&it.duration===fastest?'alt':''}">${fmt(it.duration)}${tag}</span>
+      <div class="row"><span class="dur ${idx>0&&it.duration===fastest?'alt':''}">${fmt(it.duration)}${tag}</span>
         <span class="span">${hhmm(it.startTime)} – ${hhmm(it.endTime)}</span></div>
       <div class="sub">${sub}</div>`;
     div.onclick=()=>{ select(idx); if(isMobile()) snapTo('peek'); };  // tap a route -> reveal it on the map
