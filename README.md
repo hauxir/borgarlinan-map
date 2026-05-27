@@ -73,8 +73,38 @@ from the Remix `directionStops`; per-line time-of-day frequency windows
 times from each window's modelled speed (~24–27 km/h) and cumulative stop
 distances (trunk lines A–G tagged GTFS route_type 702). Walking legs use real
 OSM streets. Simplifications: no road-snapped shapes (routing uses stop-to-stop
-times), uniform dwell, and the plan's own speed assumptions rather than live
-traffic.
+times) and uniform dwell.
+
+## Traffic ("Umferð" toggle)
+
+The proposed Borgarlína runs on dedicated lanes, so its times are congestion-free
+by design. To compare it fairly against today's options, the **Umferð** toggle (on
+by default) re-times the two modes that actually sit in traffic — the **car** and
+**current Strætó** — to typical rush-hour conditions, leaving Borgarlína, bike and
+walk untouched.
+
+All traffic data is precomputed once with TomTom and committed, so **running the
+container needs no API key** — the key is only used to (re)generate the tables.
+
+```
+build_traffic_factors.py   # TomTom Routing API along every capital-region Strætó
+   │                       # route shape -> per-segment free-flow vs typical time
+   ▼
+traffic_factors.json       # shape -> bucket -> [dist0,dist1,factor]   (committed)
+   ├─ build_route_factors.py ─▶ traffic_route_factors.json  # Strætó: per-stop-gap factors
+   └─ build_traffic_field.py ─▶ traffic_field.json          # car: ~200 m congestion grid
+        served at /traffic-factors and /traffic-field; the UI inflates legs client-side
+```
+
+**Strætó** legs: the UI matches a leg's board/alight stops to the route's stop list
+and length-weights only the gaps actually ridden, so boarding mid-route is priced on
+that stretch — not a whole-route average (route 1's gaps span 1.06–2.26). **Car**: OTP
+routes it free-flow and the UI inflates each stretch by the congestion-grid cell it
+passes through (bus corridors cover the arterials where car delay happens; off-grid
+cells default to 1.0). Buckets are weekday AM-peak / midday / PM-peak / evening,
+Saturday, Sunday (nights free-flow); factors are strongly directional (inbound ~1.5,
+outbound ~1.15 at 8am). Regenerate only when the network changes:
+`TOMTOM_API_KEY=… python3 build_traffic_factors.py && python3 build_route_factors.py && python3 build_traffic_field.py`.
 
 ## Continuous build
 

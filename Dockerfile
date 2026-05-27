@@ -43,6 +43,8 @@ COPY --from=builder /build/graph/graph.obj       /app/graph/graph.obj
 COPY --from=builder /build/graph-today/graph.obj /app/graph-today/graph.obj
 COPY index.html                             /app/index.html
 COPY server.js                              /app/server.js
+COPY traffic_route_factors.json             /app/traffic_route_factors.json
+COPY traffic_field.json                     /app/traffic_field.json
 COPY entrypoint.sh                          /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
