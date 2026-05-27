@@ -85,6 +85,8 @@
   .it .row{display:flex;justify-content:space-between;align-items:baseline;}
   .it .dur{font-size:18px;font-weight:500;color:var(--ink);}
   .it .dur.alt{color:var(--blue);}
+  .it .dur.tmod,.mode .mt.tmod{color:#e8710a;}      /* slowed by traffic */
+  .it .dur.theavy,.mode .mt.theavy{color:#d93025;}  /* heavy traffic */
   .it .span{font-size:13px;color:var(--sec);}
   .it .sub{font-size:12px;color:var(--sec);margin-top:2px;}
   .it .badge{font-size:11px;font-weight:500;color:var(--blue);border:1px solid var(--blue);
@@ -372,7 +374,7 @@ function applyTrafficItin(it, bucket){        // inflate each transit leg + the 
   it.legs.forEach(l=>{ if(!l.route)return;
     const f=legFactor(l, bucket);
     if(f>1){ const e=l.duration*(f-1); l.duration+=e; extra+=e; } });
-  if(extra){ it.duration+=extra; it.endTime+=extra*1000; }
+  if(extra){ it._ff=it.duration; it.duration+=extra; it.endTime+=extra*1000; }
   return it;
 }
 // The car is routed free-flow by OTP and inflated by the geographic congestion
@@ -402,7 +404,7 @@ function applyTrafficCar(it, bucket){
   it.legs.forEach(l=>{ if(l.mode!=='CAR'||!l.legGeometry)return;
     const f=carFactor(l.legGeometry.points,bucket);
     if(f>1){ const e=l.duration*(f-1); l.duration+=e; extra+=e; } });
-  if(extra){ it.duration+=extra; it.endTime+=extra*1000; }
+  if(extra){ it._ff=it.duration; it.duration+=extra; it.endTime+=extra*1000; }
   return it;
 }
 
@@ -429,6 +431,7 @@ const MODE_DEFS=[['TRANSIT',[{mode:'WALK'},{mode:'TRANSIT'}]],['STRAETO',[{mode:
 const MTQ=`query($fLat:Float!,$fLon:Float!,$tLat:Float!,$tLon:Float!,$d:String!,$ti:String!,$modes:[TransportMode!]){
   plan(from:{lat:$fLat,lon:$fLon},to:{lat:$tLat,lon:$tLon},date:$d,time:$ti,numItineraries:4,transportModes:$modes){itineraries{duration legs{mode duration route{shortName} trip{directionId} from{lat lon} to{lat lon} legGeometry{points}}}}}`;
 const shortMin=s=>{const m=Math.round(s/60);return m<60?m+' mín':Math.floor(m/60)+' klst'+(m%60?' '+(m%60):'');};
+const trafficClass=r=> r>=1.3?'theavy': r>=1.1?'tmod':'';   // colour the time when traffic slows it
 let mtSeq=0;
 function modeTimes(){
   const seq=++mtSeq;  // a newer trip invalidates older in-flight results
@@ -442,8 +445,11 @@ function modeTimes(){
       if(seq!==mtSeq)return;  // stale, a newer request is in flight
       const its=j.data&&j.data.plan&&j.data.plan.itineraries;
       if(!its||!its.length){ el.textContent='–'; return; }
+      const base=Math.min(...its.map(i=>i.duration));
       const durs=its.map(i=> i.duration + (m==='STRAETO'?itinExtra(i,b): m==='CAR'?carExtra(i,b):0));  // car + Strætó pay traffic
-      el.textContent=shortMin(Math.min(...durs));
+      const withT=Math.min(...durs);
+      el.textContent=shortMin(withT);
+      el.classList.remove('tmod','theavy'); const tc=trafficOn?trafficClass(withT/base):''; if(tc)el.classList.add(tc);
     }catch(e){ if(seq===mtSeq)el.textContent=''; }
   });
 }
@@ -488,7 +494,7 @@ function render(its){
              :mode==='BICYCLE'?`${walkStr(totDist)} hjólað`
              :`${walkStr(totDist)} · ${xfer(it.numberOfTransfers)} · ${stops} stopp · ${walkStr(it.walkDistance)} gangandi`;
     div.innerHTML=`<div class="legs">${legs||'<span class="chip walk">'+WALKSVG+'ganga</span>'}</div>
-      <div class="row"><span class="dur ${idx>0&&it.duration===fastest?'alt':''}">${fmt(it.duration)}${tag}</span>
+      <div class="row"><span class="dur ${it._ff?trafficClass(it.duration/it._ff)+' ':''}${idx>0&&it.duration===fastest?'alt':''}">${fmt(it.duration)}${tag}</span>
         <span class="span">${hhmm(it.startTime)} – ${hhmm(it.endTime)}</span></div>
       <div class="sub">${sub}</div>`;
     div.onclick=()=>{ select(idx); if(isMobile()) snapTo('peek'); };  // tap a route -> reveal it on the map
