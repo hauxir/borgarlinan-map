@@ -32,6 +32,33 @@ TZ         = "Atlantic/Reykjavik"
 data = json.loads(MAP.read_text())
 stops_by_id = {s["id"]: s for s in data["stops"]}
 
+# ---- corrections for known bad source data --------------------------------
+# The Remix snapshot carries corrupt distanceFromStart values that misorder
+# stops along a corridor. A full audit of every line/direction (relocation
+# cost + cross-direction consistency + stalled-distance checks) found four,
+# each confirmed by the opposite direction ordering the same physical corridor
+# correctly. Reseat each to its true position. Keyed by placeId; each placeId
+# is referenced exactly once across the whole feed.
+#
+# Two are "inserted" far past their true slot, causing a long there-and-back:
+#   - D outbound: Norðurbær recorded 14772.7 (past Hraunbrún + Hellisgerði);
+#     belongs between Ásar and Hraunbrún -> …Ásar, Norðurbær, Hraunbrún….
+#   - D inbound: Hraunvallaskóli recorded 1585.6 (past Daggarvellir);
+#     belongs between Hvannavellir and Daggarvellir.
+# Two are adjacent pairs whose distances are nearly equal (gap ~12 m) though
+# the stops are ~190 m apart, so they sort in the wrong order — a small wiggle.
+# The fix swaps the pair's two values:
+#   - D outbound: Haukáhús comes before Ásvallalaug heading west (was reversed).
+#   - M inbound:  Borgaskóli comes before Vættaborgir heading east (was reversed).
+DISTANCE_OVERRIDES = {
+    "2495e8bc-5294-4dfd-9aa2-99349ac34906": 13586.1,  # D outbound · Norðurbær
+    "16ad9bd5-d282-4790-982f-daa109e79106": 1346.6,   # D inbound  · Hraunvallaskóli
+    "d05f1a90-6268-4dbc-b527-f8fed18e9c6f": 18112.7,  # D outbound · Haukahús    (was 18126.6)
+    "23a6f682-1863-4e3c-b69a-113b95d255ad": 18126.6,  # D outbound · Ásvallalaug (was 18112.7)
+    "559f6a40-215f-4509-beda-53bc7fc1925e": 7064.7,   # M inbound  · Borgaskóli  (was 7076.4)
+    "e46ef899-4fc2-4cce-8ab7-1db051afca4c": 7076.4,   # M inbound  · Vættaborgir (was 7064.7)
+}
+
 # ---- collect the places actually used by some direction -------------------
 used_place_ids = set()
 for line in data["lines"]:
@@ -114,11 +141,13 @@ for line in data["lines"]:
     for pat in line["patterns"]:
         for d in pat["directions"]:
             dir_id = 0 if (d.get("name") == "inbound") else 1
-            seq = sorted(d["directionStops"], key=lambda x: x["distanceFromStart"])
+            def dist(ds):  # corrected cumulative distance (see DISTANCE_OVERRIDES)
+                return DISTANCE_OVERRIDES.get(ds["placeId"]) or ds["distanceFromStart"]
+            seq = sorted(d["directionStops"], key=dist)
             if len(seq) < 2:
                 continue
-            base = seq[0]["distanceFromStart"]
-            offsets = [(ds["placeId"], ds["distanceFromStart"] - base) for ds in seq]
+            base = dist(seq[0])
+            offsets = [(ds["placeId"], dist(ds) - base) for ds in seq]
             for w in line["windows"]:
                 svc = w["type"]
                 speed_mps = (w["speed"] * 1000.0) / 3600.0
